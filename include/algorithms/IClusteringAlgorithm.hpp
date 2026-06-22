@@ -7,27 +7,29 @@
 namespace clustering {
 
     struct ClusteringParams {
-        int maxClusterSize = 64;           // S_max
+        int maxClusterSize = 64;
         int minClusterSize = 1;
-        bool enforceWarpMultiple = true;   // кратность 32
-        int localOptimizationIters = 3;    // для GLB
+        bool enforceWarpMultiple = true;
+        int localOptimizationIters = 3;
         bool useIncremental = false;
         float qualityTolerance = 0.01f;
 
-        std::string toString() const;
+        std::string toString() const {
+            return "maxSize=" + std::to_string(maxClusterSize) +
+                   ", localIters=" + std::to_string(localOptimizationIters) +
+                   ", warpAlign=" + std::to_string(enforceWarpMultiple);
+        }
     };
 
     class IClusteringAlgorithm {
     public:
         virtual ~IClusteringAlgorithm() = default;
 
-        // Основной метод
         virtual ClusteringResult computeClusters(
             const Graph& graph,
             const ClusteringParams& params
         ) = 0;
 
-        // Инкрементальное обновление (опционально)
         virtual ClusteringResult updateClusters(
             const Graph& graph,
             const ClusteringResult& previous,

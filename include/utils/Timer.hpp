@@ -1,12 +1,15 @@
 #pragma once
 #include <chrono>
 #include <string>
+#include <memory>
 
 namespace clustering {
 
     class Timer {
     public:
         Timer();
+        ~Timer() = default;
+
         void start();
         void stop();
         void reset();
@@ -15,11 +18,13 @@ namespace clustering {
 
         class Scoped {
         public:
-            Scoped(const std::string& name = "");
+            explicit Scoped(const std::string& name = "");
             ~Scoped();
+
             double elapsedMs() const;
+
         private:
-            Timer m_timer;
+            std::unique_ptr<Timer> m_timer;  // Используем unique_ptr
             std::string m_name;
         };
 

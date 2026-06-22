@@ -1,50 +1,105 @@
 #include "core/Graph.hpp"
-
 #include <algorithm>
-#include <unordered_set>
 #include <stdexcept>
+#include <iostream>
 
 namespace clustering {
 
-    Graph::Graph(VertexId numVertices)
-        : m_numVertices(numVertices)
-        , m_adjacency(numVertices)
-    {}
+Graph::Graph(VertexId numVertices) {
+    m_numVertices = numVertices;
+    m_adjacency.resize(numVertices);
+    m_weights.resize(numVertices);
+    m_numEdges = 0;
+}
 
-    Graph::Graph(VertexId numVertices, const EdgeList& edges) {
-        buildFromEdges(numVertices, edges);
+Graph::Graph(VertexId numVertices, const EdgeList& edges) {
+    buildFromEdges(numVertices, edges);
+}
+
+void Graph::buildFromEdges(VertexId numVertices, const EdgeList& edges) {
+    m_numVertices = numVertices;
+    m_adjacency.clear();
+    m_weights.clear();
+    m_adjacency.resize(numVertices);
+    m_weights.resize(numVertices);
+    m_numEdges = 0;
+
+    for (const auto& e : edges) {
+        addEdge(e.u, e.v, e.weight);
+    }
+}
+
+void Graph::addVertex() {
+    m_adjacency.emplace_back();
+    m_weights.emplace_back();
+    m_numVertices++;
+}
+
+void Graph::addEdge(VertexId u, VertexId v, Weight w) {
+    if (u >= m_numVertices || v >= m_numVertices) {
+        throw std::runtime_error("addEdge: vertex out of range");
     }
 
-    void Graph::buildFromEdges(VertexId numVertices, const EdgeList& edges) {
-        m_numVertices = numVertices;
-        m_numEdges = edges.size();
-        m_adjacency.assign(numVertices, {});
+    // Проверка на дубликат (опционально, для простоты пропустим)
+    m_adjacency[u].push_back(v);
+    m_weights[u].push_back(w);
 
-        for (const auto& e : edges) {
-            if (e.u >= numVertices || e.v >= numVertices) {
-                throw std::runtime_error("Edge vertex out of range");
-            }
-            m_adjacency[e.u].push_back(e.v);
-            m_adjacency[e.v].push_back(e.u);  // неориентированный граф
+    m_adjacency[v].push_back(u);
+    m_weights[v].push_back(w);
+
+    m_numEdges++;
+}
+
+bool Graph::hasEdge(VertexId u, VertexId v) const {
+    if (u >= m_numVertices || v >= m_numVertices) return false;
+
+    const auto& neighbors = m_adjacency[u];
+    return std::find(neighbors.begin(), neighbors.end(), v) != neighbors.end();
+}
+
+Weight Graph::getEdgeWeight(VertexId u, VertexId v) const {
+    if (u >= m_numVertices || v >= m_numVertices) return 0.0f;
+
+    const auto& neighbors = m_adjacency[u];
+    const auto& weights = m_weights[u];
+
+    for (size_t i = 0; i < neighbors.size(); ++i) {
+        if (neighbors[i] == v) {
+            return weights[i];
         }
-
-        // Можно отсортировать для детерминизма (опционально)
-        for (auto& neighbors : m_adjacency) {
-            std::sort(neighbors.begin(), neighbors.end());
-            neighbors.erase(std::unique(neighbors.begin(), neighbors.end()), neighbors.end());
-        }
     }
+    return 0.0f;
+}
 
-    bool Graph::hasEdge(VertexId u, VertexId v) const {
-        if (u >= m_numVertices || v >= m_numVertices) return false;
-        const auto& neighbors = m_adjacency[u];
-        return std::find(neighbors.begin(), neighbors.end(), v) != neighbors.end();
-    }
+bool Graph::isValid() const {
+    if (m_adjacency.size() != static_cast<size_t>(m_numVertices)) return false;
+    if (m_weights.size() != static_cast<size_t>(m_numVertices)) return false;
 
-    bool Graph::isValid() const {
-        if (m_numVertices == 0) return false;
-        if (m_adjacency.size() != static_cast<size_t>(m_numVertices)) return false;
-        return true;
+    for (VertexId v = 0; v < m_numVertices; ++v) {
+        if (m_adjacency[v].size() != m_weights[v].size()) return false;
     }
+    return true;
+}
+
+void Graph::printStats() const {
+    std::cout << "Graph stats:\n";
+    std::cout << "  Vertices: " << m_numVertices << "\n";
+    std::cout << "  Edges: " << m_numEdges << "\n";
+
+    size_t maxDeg = 0;
+    size_t minDeg = m_numVertices;
+    double avgDeg = 0.0;
+
+    for (VertexId v = 0; v < m_numVertices; ++v) {
+        size_t deg = m_adjacency[v].size();
+        avgDeg += deg;
+        if (deg > maxDeg) maxDeg = deg;
+        if (deg < minDeg) minDeg = deg;
+    }
+    avgDeg /= m_numVertices;
+
+    std::cout << "  Degree: min=" << minDeg << ", max=" << maxDeg
+              << ", avg=" << avgDeg << "\n";
+}
 
 } // namespace clustering
